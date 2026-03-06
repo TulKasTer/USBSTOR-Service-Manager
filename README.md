@@ -4,6 +4,7 @@ Toggle USB storage access on Windows by changing the USBSTOR service setting in 
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/releases)
+[![Latest Release](https://img.shields.io/github/v/release/TulKasTer/UBSSTOR-Services-Manager)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/releases/latest)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/TulKasTer/UBSSTOR-Services-Manager/ci.yml?branch=main)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -19,6 +20,7 @@ Toggle USB storage access on Windows by changing the USBSTOR service setting in 
 - [Getting Started](#getting-started)
 	- [Prerequisites](#prerequisites)
 	- [Installation](#installation)
+    - [Release](#release)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
@@ -77,6 +79,16 @@ gcc -o USBSTORServiceManager.exe USBSTORServiceManager.c -ladvapi32
 ```
 
 The build produces `USBSTORServiceManager.exe` (or `USBPortState.exe` in some examples). Use whichever filename your build produces.
+
+### Release
+
+Pre-built artifacts (Windows executable) are published on the project's GitHub Releases page. To download the latest release, visit:
+
+https://github.com/TulKasTer/UBSSTOR-Services-Manager/releases/latest
+
+Your CI workflow uploads the produced binaries to the Releases section — download the Windows executable (named like `USBSTORServiceManager-windows-amd64.exe`) from the release assets and run it from an elevated prompt.
+
+If you prefer to build locally, follow the Installation instructions above.
 
 ---
 

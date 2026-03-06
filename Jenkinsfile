@@ -4,7 +4,7 @@ pipeline {
     environment {
         GITHUB_TOKEN    = credentials('github-token')
         GITHUB_REPO     = 'TulKasTer/UBSSTOR-Services-Manager'
-        PROGRAMA        = 'UBSSTORServicesManager'
+        PROGRAM        = 'UBSSTORServicesManager'
         VERSION         = "${env.TAG_NAME ?: 'dev-' + env.BUILD_NUMBER}"
     }
 

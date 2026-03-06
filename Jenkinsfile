@@ -2,88 +2,111 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_TOKEN = credentials('github-token')
-        GITHUB_REPO  = 'TulKasTer/UBSSTOR-Services-Manager'
-        PROGRAM      = 'USBSTORServiceManager'
-        VERSION      = "${env.TAG_NAME ?: 'dev-' + env.BUILD_NUMBER}"
+        GITHUB_TOKEN    = credentials('github-token')
+        GITHUB_REPO     = 'TulKasTer/UBSSTOR-Services-Manager'
+        PROGRAMA        = 'UBSSTORServicesManager'
+        VERSION         = "${env.TAG_NAME ?: 'dev-' + env.BUILD_NUMBER}"
     }
 
     stages {
+
+        // ─────────────────────────────────────────────
+        // 1. CHECKOUT
+        // ─────────────────────────────────────────────
         stage('Checkout') {
             steps {
                 checkout scm
-                echo "Versión: ${VERSION}"
+                echo "Version: ${VERSION}"
             }
         }
 
+        // ─────────────────────────────────────────────
+        // 2. BUILD
+        // ─────────────────────────────────────────────
         stage('Build') {
             steps {
-                sh '''
-                    set -e
-                    make clean || true
-                    make
+                bat '''
+                    echo Building...
+                    mingw32-make clean
+                    mingw32-make
                 '''
             }
         }
 
+        // ─────────────────────────────────────────────
+        // 3. TEST
+        // ─────────────────────────────────────────────
         stage('Test') {
             steps {
-                sh '''
-                    if make test 2>/dev/null; then
-                        echo "Tests OK"
-                    else
-                        echo "No hay tests o fallaron (continuando según configuración)"
-                    fi
+                bat '''
+                    echo Running tests...
+                    mingw32-make test
                 '''
+            }
+            post {
+                failure {
+                    echo 'Tests failed. Release will not be published.'
+                }
             }
         }
 
+        // ─────────────────────────────────────────────
+        // 4. PACKAGE
+        // ─────────────────────────────────────────────
         stage('Package') {
             steps {
-                sh '''
-                    mkdir -p dist
-                    if [ -f ${PROGRAM} ]; then cp ${PROGRAM} dist/; fi
-                    if [ -f ${PROGRAM}.exe ]; then cp ${PROGRAM}.exe dist/; fi
-                    ls -la dist || true
+                bat '''
+                    if not exist dist mkdir dist
+                    copy %PROGRAMA%.exe dist\\%PROGRAMA%-windows-amd64.exe
+                    dir dist\\
                 '''
                 archiveArtifacts artifacts: 'dist/*', fingerprint: true
             }
         }
 
-        stage('Release') {
-            when { expression { env.TAG_NAME != null } }
+        // ─────────────────────────────────────────────
+        // 5. GITHUB RELEASE
+        //    Only when build was triggered by a tag
+        // ─────────────────────────────────────────────
+        stage('GitHub Release') {
+            when {
+                expression { env.TAG_NAME != null }
+            }
             steps {
-                sh '''
-                    set -e
-                    echo "Creando release ${VERSION} para ${GITHUB_REPO}"
-                    RELEASE_ID=$(curl -s -X POST \
-                        -H "Authorization: token ${GITHUB_TOKEN}" \
-                        -H "Content-Type: application/json" \
-                        https://api.github.com/repos/${GITHUB_REPO}/releases \
-                        -d '{"tag_name":"'"${VERSION}"'","name":"'"${VERSION}"'","body":"Release ${VERSION}","draft":false,"prerelease":false}' | python3 -c 'import sys,json; print(json.load(sys.stdin).get("id",""))')
+                bat '''
+                    echo Creating GitHub release: %VERSION%
 
-                    if [ -n "${RELEASE_ID}" ]; then
-                        for F in dist/*; do
-                            [ -f "$F" ] || continue
-                            echo "Subiendo $(basename "$F")"
-                            curl -s -X POST \
-                                -H "Authorization: token ${GITHUB_TOKEN}" \
-                                -H "Content-Type: application/octet-stream" \
-                                --data-binary @"$F" \
-                                "https://uploads.github.com/repos/${GITHUB_REPO}/releases/${RELEASE_ID}/assets?name=$(basename "$F")"
-                        done
-                        echo "Release publicado: https://github.com/${GITHUB_REPO}/releases/tag/${VERSION}"
-                        else
-                            echo "No se pudo crear el release (RELEASE_ID vacío)"
-                        fi
+                    curl -s -X POST ^
+                      -H "Authorization: token %GITHUB_TOKEN%" ^
+                      -H "Content-Type: application/json" ^
+                      https://api.github.com/repos/%GITHUB_REPO%/releases ^
+                      -d "{\\\"tag_name\\\": \\\"%VERSION%\\\", \\\"name\\\": \\\"Release %VERSION%\\\", \\\"body\\\": \\\"Automatic release from Jenkins\\\", \\\"draft\\\": false, \\\"prerelease\\\": false}" ^
+                      -o release_response.json
+
+                    for /f %%i in ('powershell -Command "(Get-Content release_response.json | ConvertFrom-Json).id"') do set RELEASE_ID=%%i
+                    echo Release ID: %RELEASE_ID%
+
+                    curl -s -X POST ^
+                      -H "Authorization: token %GITHUB_TOKEN%" ^
+                      -H "Content-Type: application/octet-stream" ^
+                      --data-binary @dist\\%PROGRAMA%-windows-amd64.exe ^
+                      "https://uploads.github.com/repos/%GITHUB_REPO%/releases/%RELEASE_ID%/assets?name=%PROGRAMA%-windows-amd64.exe"
+
+                    echo Release published!
                 '''
             }
         }
     }
 
     post {
-        success { echo "Pipeline completado: ${VERSION}" }
-        failure { echo "Pipeline falló" }
-        always  { cleanWs() }
+        success {
+            echo "Pipeline completed. Version: ${VERSION}"
+        }
+        failure {
+            echo "Pipeline failed in one of the stages."
+        }
+        always {
+            cleanWs()
+        }
     }
 }

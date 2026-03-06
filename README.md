@@ -3,7 +3,7 @@
 Toggle USB storage access on Windows by changing the USBSTOR service setting in the Registry.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/releases)
+[![Version](https://img.shields.io/badge/version-1.0.6-green.svg)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/releases)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/TulKasTer/UBSSTOR-Services-Manager/ci.yml?branch=main)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 

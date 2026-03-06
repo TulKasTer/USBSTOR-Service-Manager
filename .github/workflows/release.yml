@@ -1,27 +1,45 @@
-name: Build and Release
+name: Release
 
 on:
   push:
     tags:
-      - 'v*'  # Trigger on version tags like v1.0.0
+      - 'v*'
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  # o windows-latest / macos-latest
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install GCC
-        run: sudo apt-get install -y gcc
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64 make
 
-      - name: Compile
-        run: gcc -o USBSTORServiceManager USBSTORServiceManager.c
+      - name: Build Linux binary
+        run: |
+          make clean || true
+          make CC=gcc PROG_BASE=UBSSTOR
+          mkdir -p dist
+          if [ -f UBSSTOR ]; then cp UBSSTOR dist/UBSSTOR-linux-amd64; fi
 
-      - name: Upload Release Asset
+      - name: Build Windows binary (cross-compile)
+        run: |
+          make clean || true
+          make CC=x86_64-w64-mingw32-gcc PROG_BASE=UBSSTOR
+          if [ -f UBSSTOR.exe ]; then cp UBSSTOR.exe dist/UBSSTOR-windows-amd64.exe; fi
+
+      - name: Show dist
+        run: ls -la dist || true
+
+      - name: Create GitHub release and upload artifacts
         uses: softprops/action-gh-release@v1
         with:
-          files: USBSTORServiceManager
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

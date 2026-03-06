@@ -1,35 +1,29 @@
-CC := gcc
-CFLAGS := -Wall -Wextra -O2
-LDFLAGS := -ladvapi32
+# ─────────────────────────────────────────────
+# Makefile for Windows (MinGW)
+# ─────────────────────────────────────────────
 
-TARGET := USBSTORServiceManager.exe
-SRCS := USBSTORServiceManager.c
-OBJS := $(SRCS:.c=.o)
+CC      = gcc
+OUTPUT  = USBSTORServiceManager.exe
+SRCS    = USBSTORServiceManager.c
+CFLAGS  = -Wall -Wextra -O2
+LIBS    = -ladvapi32
 
-ifeq ($(OS),Windows_NT)
-RUN_CMD := .\$(TARGET)
-else
-RUN_CMD := ./$(TARGET)
-endif
+.PHONY: all clean test
 
-.PHONY: all build clean run help
+all: $(OUTPUT)
 
-all: build
+$(OUTPUT): $(SRCS)
+	$(CC) $(CFLAGS) -o $(OUTPUT) $(SRCS) $(LIBS)
+	@echo Successfully compiled: $(OUTPUT)
 
-build: $(TARGET)
-
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $@ $(SRCS) $(LDFLAGS)
-
+# clean using Windows commands
 clean:
-	-rm -f $(TARGET) $(OBJS)
+	@if exist $(OUTPUT) del /f /q $(OUTPUT)
+	@if exist *.o del /f /q *.o
+	@echo Cleanup complete
 
-run: build
-	$(RUN_CMD)
-
-help:
-	@echo "Targets:"
-	@echo "  make        (build - default)"
-	@echo "  make build  (build binary)"
-	@echo "  make run    (build and run)"
-	@echo "  make clean  (remove artifacts)"
+# basic test — verifies the executable exists after build
+test:
+	@echo Running tests...
+	@if not exist $(OUTPUT) ( echo ERROR: $(OUTPUT) not found && exit 1 )
+	@echo Test OK: $(OUTPUT) compiled successfully

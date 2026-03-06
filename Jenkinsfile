@@ -4,7 +4,7 @@ pipeline {
     environment {
         GITHUB_TOKEN    = credentials('github-token')
         GITHUB_REPO     = 'TulKasTer/UBSSTOR-Services-Manager'
-        PROGRAM        = 'UBSSTORServicesManager'
+        PROGRAM        = 'USBSTORServiceManager'
         VERSION         = "${env.TAG_NAME ?: 'dev-' + env.BUILD_NUMBER}"
     }
 
@@ -57,7 +57,7 @@ pipeline {
             steps {
                 bat '''
                     if not exist dist mkdir dist
-                    copy %PROGRAMA%.exe dist\\%PROGRAMA%-windows-amd64.exe
+                    copy %PROGRAM%.exe dist\\%PROGRAM%-windows-amd64.exe
                     dir dist\\
                 '''
                 archiveArtifacts artifacts: 'dist/*', fingerprint: true
@@ -66,7 +66,7 @@ pipeline {
 
         // ─────────────────────────────────────────────
         // 5. GITHUB RELEASE
-        //    Only when build was triggered by a tag
+        //    Only runs when triggered by a tag push
         // ─────────────────────────────────────────────
         stage('GitHub Release') {
             when {
@@ -80,7 +80,7 @@ pipeline {
                       -H "Authorization: token %GITHUB_TOKEN%" ^
                       -H "Content-Type: application/json" ^
                       https://api.github.com/repos/%GITHUB_REPO%/releases ^
-                      -d "{\\\"tag_name\\\": \\\"%VERSION%\\\", \\\"name\\\": \\\"Release %VERSION%\\\", \\\"body\\\": \\\"Automatic release from Jenkins\\\", \\\"draft\\\": false, \\\"prerelease\\\": false}" ^
+                      -d "{\\"tag_name\\": \\"%VERSION%\\", \\"name\\": \\"Release %VERSION%\\", \\"body\\": \\"Automated release by Jenkins\\", \\"draft\\": false, \\"prerelease\\": false}" ^
                       -o release_response.json
 
                     for /f %%i in ('powershell -Command "(Get-Content release_response.json | ConvertFrom-Json).id"') do set RELEASE_ID=%%i
@@ -89,10 +89,10 @@ pipeline {
                     curl -s -X POST ^
                       -H "Authorization: token %GITHUB_TOKEN%" ^
                       -H "Content-Type: application/octet-stream" ^
-                      --data-binary @dist\\%PROGRAMA%-windows-amd64.exe ^
-                      "https://uploads.github.com/repos/%GITHUB_REPO%/releases/%RELEASE_ID%/assets?name=%PROGRAMA%-windows-amd64.exe"
+                      --data-binary @dist\\%PROGRAM%-windows-amd64.exe ^
+                      "https://uploads.github.com/repos/%GITHUB_REPO%/releases/%RELEASE_ID%/assets?name=%PROGRAM%-windows-amd64.exe"
 
-                    echo Release published!
+                    echo Release published successfully!
                 '''
             }
         }
@@ -100,10 +100,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline completed. Version: ${VERSION}"
+            echo "Pipeline completed successfully. Version: ${VERSION}"
         }
         failure {
-            echo "Pipeline failed in one of the stages."
+            echo "Pipeline failed at one of the stages."
         }
         always {
             cleanWs()

@@ -1,0 +1,27 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # o windows-latest / macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install GCC
+        run: sudo apt-get install -y gcc
+
+      - name: Compile
+        run: gcc -o USBSTORServiceManager USBSTORServiceManager.c
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: USBSTORServiceManager
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

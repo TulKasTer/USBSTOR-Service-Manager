@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
 
   # ─────────────────────────────────────────────
@@ -14,7 +17,7 @@ jobs:
     name: Build Windows (.exe)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Install MinGW
         run: |
@@ -25,7 +28,7 @@ jobs:
         run: make build-windows CC_WIN=x86_64-w64-mingw32-gcc
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: windows-build
           path: USBSTORServiceManager-windows-amd64.exe
@@ -38,7 +41,7 @@ jobs:
     name: Build Linux
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Install GCC
         run: |
@@ -49,7 +52,7 @@ jobs:
         run: make build-linux
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: linux-build
           path: USBSTORServiceManager-linux-amd64
@@ -62,13 +65,13 @@ jobs:
     name: Build macOS
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Build
         run: make build-macos
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: macos-build
           path: USBSTORServiceManager-macos-universal
@@ -86,7 +89,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.3.0
         with:
           path: dist
           merge-multiple: true

@@ -1,47 +1,88 @@
 # ─────────────────────────────────────────────
-# Makefile — Cross-compile for Windows from Linux
+# Makefile — USBSTORServiceManager
+# Targets: Windows (cross), Linux (native), MacOS (native)
 # ─────────────────────────────────────────────
 
-# Use MinGW cross-compiler by default for Windows builds
-CC ?= x86_64-w64-mingw32-gcc
+# compiler and flags
 PROG_BASE ?= USBSTORServiceManager
-WINDOWS_OUT = $(PROG_BASE).exe
-LINUX_STUB = linux_stub.c
-LINUX_OUT = $(PROG_BASE)-linux
-
-SRCS_WINDOWS = USBSTORServiceManager.c
+SRC = USBSTORServiceManager.c
 CFLAGS = -Wall -Wextra -O2
-LIBS = -ladvapi32
 
-.PHONY: all build-windows build-linux-stub package clean test
+# Compilers
+CC_WINDOWS ?= x86_64-w64-mingw32-gcc
+CC_LINUX ?= gcc
+CC_MACOS ?= clang
 
-all: build-windows
+# Output names
+OUT_WINDOWS = $(PROG_BASE)-windows-amd64.exe
+OUT_LINUX = $(PROG_BASE)-linux-amd64
+OUT_MACOS = $(PROG_BASE)-macos-universal
 
+# Libraries
+LIBS_WINDOWS = -ladvapi32
+LIBS_LINUX =
+LIBS_MACOS =
+
+.PHONY: all build-windows build-linux build-macos package clean test
+
+all: 
+ifneq ($(OS),Windows_NT)
+	$(MAKE) build-windows
+
+else
+	UNAME := $(shell uname -s)
+
+	ifeq ($(UNAME), Linux)
+		$(MAKE) build-linux
+
+		else ifeq ($(UNAME), Darwin)
+			$(MAKE) build-macos
+
+		endif
+endif
+
+# Build targets
+
+# Windows cross-compilation
 build-windows: $(WINDOWS_OUT)
 
-$(WINDOWS_OUT): $(SRCS_WINDOWS)
-	$(CC) $(CFLAGS) -o $@ $(SRCS_WINDOWS) $(LIBS)
+$(WINDOWS_OUT): $(SRC)
+	$(CC_WINDOWS) $(CFLAGS) -o $@ $< $(LIBS_WINDOWS)
 	@echo Successfully compiled: $@
 
-build-linux-stub: $(LINUX_OUT)
+# Linux native compilation
+build-linux: $(LINUX_OUT)
 
-$(LINUX_OUT): $(LINUX_STUB)
-	gcc -o $@ $(LINUX_STUB)
-	@echo Created Linux stub: $@
+$(LINUX_OUT): $(SRC)
+	gcc -o $@ $< $(LIBS_LINUX)
+	@echo Successfully compiled: $@
 
-package: build-windows build-linux-stub
+# MacOs native compilation
+build-macos: 
+	clang -target x86_64-apple-macos10.15 -o $(PROG_BASE)-x86   $(SRC)
+	clang -target arm64-apple-macos11     -o $(PROG_BASE)-arm64  $(SRC)
+	lipo -create -output $(OUT_MACOS) $(PROG_BASE)-x86 $(PROG_BASE)-arm64
+	@rm $(PROG_BASE)-x86 $(PROG_BASE)-arm64
+	@echo Successfully compiled: $@
+
+# Package all built artifacts into a dist/ directory
+package: build-windows build-linux build-macos
 	@mkdir -p dist
 	@cp $(WINDOWS_OUT) dist/$(PROG_BASE)-windows-amd64.exe 2>/dev/null || true
 	@cp $(LINUX_OUT) dist/$(PROG_BASE)-linux-amd64 2>/dev/null || true
+	@cp $(MACOS_OUT) dist/$(PROG_BASE)-macos-universal 2>/dev/null || true
 	@echo Packaged artifacts in dist/
 
-clean:
-	-rm -f $(WINDOWS_OUT) $(LINUX_OUT) *.o
-	-rm -rf dist
-	@echo Cleanup complete
-
-# Basic test — verifies the artifacts were produced
+# Test that the expected artifacts are present in the dist/ directory after packaging
 test: package
 	@echo Running tests...
 	@test -f dist/$(PROG_BASE)-windows-amd64.exe || (echo "ERROR: windows artifact missing" && exit 1)
+	@test -f dist/$(PROG_BASE)-linux-amd64 || (echo "ERROR: linux artifact missing" && exit 1)
+	@test -f dist/$(PROG_BASE)-macos-universal || (echo "ERROR: macos artifact missing" && exit 1)
 	@echo "Test OK: artifacts present in dist/"
+
+# Cleanup build artifacts
+clean:
+	-rm -f $(WINDOWS_OUT) $(LINUX_OUT) $(MACOS_OUT) *.o
+	-rm -rf dist
+	@echo Cleanup complete

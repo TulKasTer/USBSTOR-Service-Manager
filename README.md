@@ -1,14 +1,16 @@
-# UBSSTOR-Services-Manager
+# USBSTOR-Service-Manager
 
-Toggle USB storage access on Windows by changing the USBSTOR service setting in the Registry.
+Cross-platform CLI utility to enable, disable, or check the status of USB storage devices.
+
+- **Windows** — modifies the `USBSTOR` service value in the Registry
+- **Linux** — manages the `usb_storage` kernel module via blacklist and initramfs
+- **macOS** — controls `IOUSBMassStorageDriver` via kextunload and a LaunchDaemon 
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/releases)
-[![Latest Release](https://img.shields.io/github/v/release/TulKasTer/UBSSTOR-Services-Manager)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/releases/latest)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/TulKasTer/UBSSTOR-Services-Manager/ci.yml?branch=main)](https://github.com/TulKasTer/UBSSTOR-Services-Manager/actions)
+[![Version](https://img.shields.io/badge/version-1.1.0-green.svg)](https://github.com/TulKasTer/USBSTOR-Service-Manager/releases)
+[![Latest Release](https://img.shields.io/github/v/release/TulKasTer/USBSTOR-Service-Manager)](https://github.com/TulKasTer/USBSTOR-Service-Manager/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/TulKasTer/USBSTOR-Service-Manager/release.yml?branch=main)](https://github.com/TulKasTer/USBSTOR-Service-Manager/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-
-![Project Banner or Screenshot](https://via.placeholder.com/1200x400?text=USBSTOR+Service+Manager)
 
 ---
 
@@ -16,43 +18,36 @@ Toggle USB storage access on Windows by changing the USBSTOR service setting in 
 
 - [About](#about)
 - [Features](#features)
-- [Demo](#demo)
 - [Getting Started](#getting-started)
-	- [Prerequisites](#prerequisites)
-	- [Installation](#installation)
-    - [Release](#release)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Release](#release)
 - [Usage](#usage)
-- [Configuration](#configuration)
+- [How it works](#how-it-works)
 - [Project Structure](#project-structure)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
 - [Contact](#contact)
-- [Acknowledgements](#acknowledgements)
 
 ---
 
 ## About
 
-A small Windows utility to enable, disable or check the status of USB storage devices by updating the `USBSTOR` service value in the Registry. It's meant for administrators who need a quick way to enforce USB storage policies on individual machines without installing extra software.
+A small cross-platform utility to enforce USB storage policies on individual machines without installing extra software. It runs from the command line, requires no GUI, and is suitable for automation or inclusion in provisioning scripts.
 
-Built to be simple and scriptable — no GUI, just a tiny command-line tool that you can run locally or from automation.
+Originally Windows-only, it now targets all three major desktop platforms from a single C source file using preprocessor conditionals (`#ifdef _WIN32`, `#elif __linux__`, `#elif __APPLE__`).
 
 ---
 
 ## Features
 
-- Lightweight — single small executable, no dependencies beyond standard Windows APIs
-- Toggle USB storage quickly via Registry (`USBSTOR` Start value)
-- Check status — query current setting without making changes
-- Script-friendly — suitable for automation or inclusion in larger provisioning scripts
-- Includes safety notes and Registry backup recommendations
-
----
-
-## Demo
-
-There is no hosted demo for this CLI tool. Example usage is shown in the Usage section below.
+- Single executable per platform — no runtime dependencies beyond standard system APIs
+- **Windows** — reads and writes the `USBSTOR\Start` registry DWORD; prompts for reboot
+- **Linux** — writes or removes `/etc/modprobe.d/disable-usb-storage.conf`; auto-detects distro to rebuild initramfs; applies the change immediately via `modprobe`
+- **macOS** — unloads `IOUSBMassStorageDriver` immediately; installs or removes a LaunchDaemon for persistence across reboots
+- `status` command reports both the live state and the persistent block on all platforms
+- Script-friendly — exits with `EXIT_SUCCESS` / `EXIT_FAILURE` for use in automation
 
 ---
 
@@ -60,89 +55,165 @@ There is no hosted demo for this CLI tool. Example usage is shown in the Usage s
 
 ### Prerequisites
 
-- Windows 10 / 11
-- C compiler targeting Windows (MinGW/gcc or MSVC)
-- Administrator (elevated) shell to run the resulting executable
+| Platform | Requirement |
+|---|---|
+| Windows | Administrator shell; MinGW/gcc or MSVC to build from source |
+| Linux | Root shell; `gcc`, `make`; distro package manager for initramfs tools |
+| macOS | Root shell; Xcode Command Line Tools (`xcode-select --install`) |
 
 ### Installation
 
-Clone the repository and build from source:
+Clone and build from source:
 
+```bash
+git clone https://github.com/TulKasTer/USBSTOR-Service-Manager.git
+cd USBSTOR-Service-Manager
+```
+
+**Windows** (PowerShell or WSL):
 ```powershell
-git clone https://github.com/TulKasTer/UBSSTOR-Services-Manager.git
-cd UBSSTOR-Services-Manager
-# If you have make (WSL or GNU make for Windows)
-make
+# With make (WSL or GNU make for Windows)
+make build-windows
 
-# Or compile directly with gcc (PowerShell):
+# Or directly with gcc
 gcc -o USBSTORServiceManager.exe USBSTORServiceManager.c -ladvapi32
 ```
 
-The build produces `USBSTORServiceManager.exe` (or `USBPortState.exe` in some examples). Use whichever filename your build produces.
+**Linux**:
+```bash
+make build-linux
+# or
+gcc -o USBSTORServiceManager-linux-amd64 USBSTORServiceManager.c
+```
+
+**macOS**:
+```bash
+make build-macos
+# or
+clang -o USBSTORServiceManager-macos-amd64 USBSTORServiceManager.c
+```
 
 ### Release
 
-Pre-built artifacts (Windows executable) are published on the project's GitHub Releases page. To download the latest release, visit:
+Pre-built binaries for all three platforms are published on the GitHub Releases page:
 
-https://github.com/TulKasTer/UBSSTOR-Services-Manager/releases/latest
+https://github.com/TulKasTer/USBSTOR-Service-Manager/releases/latest
 
-Your CI workflow uploads the produced binaries to the Releases section — download the Windows executable (named like `USBSTORServiceManager-windows-amd64.exe`) from the release assets and run it from an elevated prompt.
+| Platform | File |
+|---|---|
+| Windows x64 | `USBSTORServiceManager-windows-amd64.exe` |
+| Linux x64 | `USBSTORServiceManager-linux-amd64` |
+| macOS x64 | `USBSTORServiceManager-macos-amd64` |
 
-If you prefer to build locally, follow the Installation instructions above.
+Download the binary for your platform and run it from an elevated shell.
 
 ---
 
 ## Usage
 
-Run the executable from an elevated command prompt.
+All platforms share the same three commands. Run from an elevated shell (Administrator on Windows, `sudo` on Linux/macOS).
 
-```powershell
-.\USBSTORServiceManager.exe enable    # Enable USB storage
-.\USBSTORServiceManager.exe disable   # Disable USB storage
-.\USBSTORServiceManager.exe status    # Show current status
+```bash
+# Enable USB storage
+./USBSTORServiceManager enable
+
+# Disable USB storage
+./USBSTORServiceManager disable
+
+# Show current state (live + persistent)
+./USBSTORServiceManager status
 ```
 
-Example:
-
+**Windows** (elevated PowerShell):
 ```powershell
-# Disable USB storage now
-.\USBSTORServiceManager.exe disable
+.\USBSTORServiceManager-windows-amd64.exe disable
+.\USBSTORServiceManager-windows-amd64.exe status
+```
 
-# Check status
-.\USBSTORServiceManager.exe status
+**Linux**:
+```bash
+sudo ./USBSTORServiceManager-linux-amd64 disable
+sudo ./USBSTORServiceManager-linux-amd64 status
+```
+
+**macOS**:
+```bash
+sudo ./USBSTORServiceManager-macos-amd64 disable
+sudo ./USBSTORServiceManager-macos-amd64 status
+```
+
+### Example `status` output (Linux)
+
+```
+Kernel module loaded      : YES
+Blacklist file (persists) : YES — disabled on boot
+[!] Active now but will be blocked after reboot.
 ```
 
 ---
 
-## Configuration
+## How it works
 
-This tool has no runtime configuration file. It operates by setting the `Start` DWORD under `HKLM\SYSTEM\CurrentControlSet\Services\USBSTOR`:
+Each platform uses a different native mechanism:
 
-| Value name | Expected | Meaning |
-|------------|----------|---------|
-| `Start`    | `3`      | USB storage enabled (default)
-| `Start`    | `4`      | USB storage disabled |
+### Windows
+
+Reads and writes the `Start` DWORD under `HKLM\SYSTEM\CurrentControlSet\Services\USBSTOR`:
+
+| Value | Meaning |
+|---|---|
+| `3` | USB storage enabled (demand start) |
+| `4` | USB storage disabled |
+
+Changes take effect after reboot. The tool prompts for confirmation before rebooting.
+
+### Linux
+
+Creates or removes `/etc/modprobe.d/disable-usb-storage.conf` containing `blacklist usb_storage`.
+
+After writing or removing the file, it:
+1. Applies the change immediately with `modprobe -r usb_storage` or `modprobe usb_storage`
+2. Rebuilds the initramfs using the correct command for the detected distro:
+
+| Distro family | Command |
+|---|---|
+| Debian / Ubuntu | `update-initramfs -u` |
+| RHEL / Fedora / CentOS | `dracut --force` |
+| Arch | `mkinitcpio -P` |
+
+### macOS
+
+Unloads or loads `com.apple.iokit.IOUSBMassStorageDriver` via `kextunload` / `kextload` for the current session.
+
+For persistence across reboots, it installs or removes a LaunchDaemon at `/Library/LaunchDaemons/com.usbstor.disable.plist` that re-runs the unload on every boot.
+
+> **Note:** macOS 11 Big Sur and later seal the system volume, so modifying kernel extensions directly is not possible. The LaunchDaemon approach works within those constraints.
 
 ---
 
 ## Project Structure
 
 ```
-UBSSTOR-Services-Manager/
-├── USBSTORServiceManager.c   # Main source
-├── Makefile                  # Build helper
+USBSTOR-Service-Manager/
+├── .github/
+│   └── workflows/
+│       └── release.yml           # CI/CD — builds for Windows, Linux, macOS
+├── USBSTORServiceManager.c       # Single cross-platform source file
+├── Makefile                      # Build targets per platform
 ├── README.md
-├── LICENSE
-└── Jenkinsfile               # Optional CI pipeline
+└── LICENSE
 ```
 
 ---
 
 ## Roadmap
 
-- [x] Basic enable/disable/status commands
-
-See open issues for more ideas.
+- [x] Windows — Registry-based enable/disable/status
+- [x] Linux — blacklist + initramfs + live modprobe
+- [x] macOS — kextunload + LaunchDaemon persistence
+- [x] Cross-platform CI/CD with GitHub Actions
+- [ ] Logging to a file for audit trail
+- [ ] Dry-run mode (`--dry-run`) that prints actions without executing them
 
 ---
 
@@ -167,12 +238,5 @@ Distributed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contact
 
-Maintainer: TulKasTer — open an issue or PR on GitHub: https://github.com/TulKasTer/UBSSTOR-Services-Manager
-
----
-
-## Acknowledgements
-
-- Windows Registry APIs and Microsoft Docs
-- Examples and snippets from community tutorials on managing drivers and services
-
+Maintainer: TulKasTer — open an issue or PR on GitHub:
+https://github.com/TulKasTer/USBSTOR-Service-Manager

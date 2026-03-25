@@ -3,44 +3,28 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'   # Triggered by tags like v1.0.0, v2.3.1, etc.
+      - 'v*'
 
 jobs:
 
   # ─────────────────────────────────────────────
-  # TEST + BUILD (cross-compile Windows .exe from Linux)
+  # Windows — cross-compile desde Ubuntu con MinGW
   # ─────────────────────────────────────────────
   build-windows:
     name: Build Windows (.exe)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install MinGW cross-compiler
+      - name: Install MinGW
         run: |
           sudo apt-get update -q
           sudo apt-get install -y gcc-mingw-w64 make
 
-      - name: Verify compiler
-        run: x86_64-w64-mingw32-gcc --version
+      - name: Build
+        run: make build-windows CC_WIN=x86_64-w64-mingw32-gcc
 
-      - name: Build (cross-compile Windows exe)
-        run: |
-          # Force cross-compile to avoid building with native gcc (linux), which lacks windows.h
-          make clean || true
-          make CC=x86_64-w64-mingw32-gcc PROG_BASE=USBSTORServiceManager
-
-      - name: Test (if available)
-        run: |
-          make test || true
-
-      - name: Rename artifact
-        run: |
-          if [ -f USBSTORServiceManager.exe ]; then mv USBSTORServiceManager.exe USBSTORServiceManager-windows-amd64.exe; fi
-
-      - name: Upload artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
@@ -48,67 +32,69 @@ jobs:
 
 
   # ─────────────────────────────────────────────
-  # BUILD ON WINDOWS RUNNER (native build)
+  # Linux — compilación nativa
   # ─────────────────────────────────────────────
-  build-windows-native:
-    name: Build Windows (native)
-    runs-on: windows-latest
-
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build on Windows
-        shell: powershell
+      - name: Install GCC
         run: |
-          Write-Host "Checking for compilers..."
-          if (Get-Command cl -ErrorAction SilentlyContinue) {
-            Write-Host "Building with MSVC (cl)..."
-            cl /nologo /O2 USBSTORServiceManager.c advapi32.lib
-            if (Test-Path .\USBSTORServiceManager.exe) { Rename-Item .\USBSTORServiceManager.exe USBSTORServiceManager-windows-amd64.exe }
-          } elseif (Get-Command gcc -ErrorAction SilentlyContinue) {
-            Write-Host "Building with GCC..."
-            gcc -o USBSTORServiceManager.exe USBSTORServiceManager.c -ladvapi32
-            if (Test-Path .\USBSTORServiceManager.exe) { Rename-Item .\USBSTORServiceManager.exe USBSTORServiceManager-windows-amd64.exe }
-          } else {
-            Write-Error "No supported compiler found on runner"
-          }
+          sudo apt-get update -q
+          sudo apt-get install -y gcc make
 
-      - name: Upload native artifact
+      - name: Build
+        run: make build-linux
+
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: windows-native
-          path: USBSTORServiceManager-windows-amd64.exe
+          name: linux-build
+          path: USBSTORServiceManager-linux-amd64
 
 
   # ─────────────────────────────────────────────
-  # GITHUB RELEASE
-  # Only runs after build passes
+  # macOS — compilación nativa con clang
+  # ─────────────────────────────────────────────
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: make build-macos
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: USBSTORServiceManager-macos-universal
+
+
+  # ─────────────────────────────────────────────
+  # Release — solo corre si los 3 builds pasan
   # ─────────────────────────────────────────────
   release:
     name: GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-windows, build-windows-native]
+    needs: [build-windows, build-linux, build-macos]
     permissions:
       contents: write
 
     steps:
-      - name: Download artifact
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: windows-build
           path: dist
+          merge-multiple: true
 
-      - name: Download native Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-native
-          path: dist
-
-      - name: List files to publish
+      - name: List artifacts
         run: ls -lh dist/
 
-      - name: Create Release and upload executable
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           name: "Release ${{ github.ref_name }}"
@@ -119,6 +105,8 @@ jobs:
             | Platform | File |
             |---|---|
             | Windows x64 | `USBSTORServiceManager-windows-amd64.exe` |
+            | Linux x64   | `USBSTORServiceManager-linux-amd64`       |
+            | macOS x64   | `USBSTORServiceManager-macos-universal`   |
 
             > Automated release generated by GitHub Actions.
           files: dist/*

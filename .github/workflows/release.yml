@@ -25,10 +25,7 @@ jobs:
           sudo apt-get install -y gcc-mingw-w64 make
 
       - name: Build
-        run: make build-windows CC_WIN=x86_64-w64-mingw32-gcc
-
-      - name: Verify artifact
-        run: ls -lh *.exe || echo "No .exe file found!"
+        run: make build-windows CC_WINDOWS=x86_64-w64-mingw32-gcc
 
       - name: Upload
         uses: actions/upload-artifact@v4.6.2
@@ -53,9 +50,6 @@ jobs:
 
       - name: Build
         run: make build-linux
-
-      - name: Verify artifact
-        run: ls -lh USBSTORServiceManager* || echo "No binary found"
 
       - name: Upload
         uses: actions/upload-artifact@v4.6.2

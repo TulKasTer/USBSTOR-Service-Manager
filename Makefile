@@ -58,7 +58,9 @@ $(LINUX_OUT): $(SRC)
 	@echo Successfully compiled: $@
 
 # MacOs native compilation
-build-macos: 
+build-macos: $(MACOS_OUT)
+
+$(MACOS_OUT): $(SRC)
 	clang -target x86_64-apple-macos10.15 -o $(PROG_BASE)-x86   $(SRC)
 	clang -target arm64-apple-macos11     -o $(PROG_BASE)-arm64  $(SRC)
 	lipo -create -output $(OUT_MACOS) $(PROG_BASE)-x86 $(PROG_BASE)-arm64

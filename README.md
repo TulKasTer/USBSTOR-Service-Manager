@@ -7,7 +7,7 @@ Cross-platform CLI utility to enable, disable, or check the status of USB storag
 - **macOS** — controls `IOUSBMassStorageDriver` via kextunload and a LaunchDaemon 
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.1.1-green.svg)](https://github.com/TulKasTer/USBSTOR-Service-Manager/releases)
+[![Version](https://img.shields.io/badge/version-1.1.5-green.svg)](https://github.com/TulKasTer/USBSTOR-Service-Manager/releases)
 [![Latest Release](https://img.shields.io/github/v/release/TulKasTer/USBSTOR-Service-Manager)](https://github.com/TulKasTer/USBSTOR-Service-Manager/releases/latest)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/TulKasTer/USBSTOR-Service-Manager/release.yml?branch=main)](https://github.com/TulKasTer/USBSTOR-Service-Manager/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
